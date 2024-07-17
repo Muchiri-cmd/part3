@@ -1,18 +1,25 @@
+//express
 const express = require('express')
 const app = express()
 
-const morgan = require('morgan')
-app.use(morgan('tiny'))
-
+// CORS middleware
 const cors = require('cors')
 app.use(cors())
 
-app.use(express.json())//json-parser
+//json-parser
+app.use(express.json())
+
+// Application Requests Logger - https://github.com/expressjs/morgan
+const morgan = require('morgan')
+app.use(morgan('tiny'))
 
 morgan.token('postData',function(req,res){
     return JSON.stringify(req.body)
 })
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :postData'));
+
+// express middleware to serve static content
+app.use(express.static('dist'))
 
 let persons = [
     { 
@@ -37,9 +44,11 @@ let persons = [
     }
 ]
 
+//function to generate user Id for each person's record
 const generateId = () => {
     return String(Math.round(Math.random()* 10000))
 }
+
 app.get('/',(req,res)=> {
     res.send('<h1>PhoneBook App</h1>')
 })
