@@ -21,60 +21,36 @@ app.use(morgan(':method :url :status :res[content-length] - :response-time ms :p
 // express middleware to serve static content
 app.use(express.static('dist'))
 
-let persons = [
-    { 
-      "id": "1",
-      "name": "Arto Hellas", 
-      "phoneNumber": "040-123456"
-    },
-    { 
-      "id": "2",
-      "name": "Ada Lovelace", 
-      "phoneNumber": "39-44-5323523"
-    },
-    { 
-      "id": "3",
-      "name": "Dan Abramov", 
-      "phoneNumber": "12-43-234345"
-    },
-    { 
-      "id": "4",
-      "name": "Mary Poppendieck", 
-      "phoneNumber": "39-23-6423122"
-    }
-]
-
-//function to generate user Id for each person's record
-const generateId = () => {
-    return String(Math.round(Math.random()* 10000))
-}
+let Person = require('./Models/person')
 
 app.get('/',(req,res)=> {
     res.send('<h1>PhoneBook App</h1>')
 })
 
 app.get('/api/persons',(req,res)=>{
-    res.json(persons)
+    Person.find({})
+    .then(persons=>{
+        res.json(persons)
+        // console.log('phonebook:');
+        // persons.forEach(person=>console.log(`${person.name} - ${person.phoneNumber}`))
+    })
 })
 
-app.get('/info',(req,res)=>{
-    const entries = persons.length
-    const datetime = new Date()
-    res.send(`
-            <p>Phonebook has info for ${entries} people</p><br>
+app.get('/info', async (req, res) => {
+    try {
+        const count = await Person.countDocuments({});
+        const datetime = new Date();
+        res.send(`
+            <p>Phonebook has info for ${count} people</p><br>
             ${datetime}
-        `)
-})
+        `);
+    } catch (error) {
+        console.error('Error counting documents:', error);
+    }
+});
 
 app.get('/api/persons/:id',(req,res)=>{
-    const id = req.params.id
-    person = persons.find(person => person.id == id)
-    if (person){
-        console.log("person",person);
-        res.json(person)
-    } else {
-        res.status(404).end()
-    }
+    Person.findById(req.params.id).then(person=>res.json(person))
   
 })
 
@@ -84,28 +60,38 @@ app.post('/api/persons',(req,res)=>{
         return res.status(400).json({error:'Name is missing'})
     } else if (!body.phoneNumber){
         return res.status(400).json({error:'phoneNumber is missing'})
-    } else if (persons.find(person=> person.name == body.name)){
-        return res.status(400).json({error:'name must be unique'})
-    }
-    const person = {
-        id:generateId(),
-        name:body.name,
-        phoneNumber:body.phoneNumber
-    }
-    persons = persons.concat(person)
-    // console.log(person);
-    res.json(person)
-
+    } 
+    // else if (Person.findOne({name:body.name})){
+    //     return res.status(400).json({error:'name must be unique'})
+    // }
+    const person = new Person({
+            name:body.name,
+            phoneNumber:body.phoneNumber
+        }) 
+    person.save().then(savedPerson => {
+        console.log(`
+            added ${savedPerson.new_name} number ${savedPerson.phoneNumber} to phonebook\n`
+        )
+        res.json(savedPerson)
+    })
 })
+app.put('/api/persons/:id', (req, res) => {
+    const id  = req.params.id;
+    const updatedPerson = req.body;
+    Person.findByIdAndUpdate(id, updatedPerson, { new: true })
+    res.json(updatedPerson); 
+});
 
-app.delete('/api/persons/:id',(req,res)=>{
-    const id = req.params.id
-    persons = persons.filter(person=> person.id!=id )
-    res.status(204).end()
-})
+app.delete('/api/persons/:id', async (req, res) => {
+    try {
+        await Person.findByIdAndDelete(req.params.id);
+        res.status(204).end();
+    } catch (error) {
+        console.error('Error deleting person:', error);
+    }
+});
 
-
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT 
 app.listen(PORT,()=>{
     console.log(`Server listening on port ${PORT}`);
 })
