@@ -31,12 +31,10 @@ app.get('/api/persons',(req,res)=>{
     Person.find({})
     .then(persons=>{
         res.json(persons)
-        // console.log('phonebook:');
-        // persons.forEach(person=>console.log(`${person.name} - ${person.phoneNumber}`))
     })
 })
 
-app.get('/info', async (req, res) => {
+app.get('/info', async (req, res,next) => {
     try {
         const count = await Person.countDocuments({});
         const datetime = new Date();
@@ -45,13 +43,14 @@ app.get('/info', async (req, res) => {
             ${datetime}
         `);
     } catch (error) {
-        console.error('Error counting documents:', error);
+        next(error)
     }
 });
 
-app.get('/api/persons/:id',(req,res)=>{
-    Person.findById(req.params.id).then(person=>res.json(person))
-  
+app.get('/api/persons/:id',(req,res,next)=>{
+    Person.findById(req.params.id)
+        .then(person=>res.json(person))
+        .catch(err=>next(err))
 })
 
 app.post('/api/persons',(req,res)=>{
@@ -75,21 +74,34 @@ app.post('/api/persons',(req,res)=>{
         res.json(savedPerson)
     })
 })
-app.put('/api/persons/:id', (req, res) => {
+
+app.put('/api/persons/:id', (req, res,next) => {
     const id  = req.params.id;
     const updatedPerson = req.body;
     Person.findByIdAndUpdate(id, updatedPerson, { new: true })
-    res.json(updatedPerson); 
+        .then(updatedPerson =>  res.json(updatedPerson))
+        .catch(error => next(error))
 });
 
-app.delete('/api/persons/:id', async (req, res) => {
+app.delete('/api/persons/:id', async (req, res,next) => {
     try {
         await Person.findByIdAndDelete(req.params.id);
         res.status(204).end();
     } catch (error) {
-        console.error('Error deleting person:', error);
+        next(error)
     }
 });
+
+const errorHandler = (error,req,res,next) =>{
+    console.log(error.message)
+
+    if (error.name = 'CastError'){
+        return res.status(400).send({ error: 'invalid id' })
+    }
+    next(error)
+}
+
+app.use(errorHandler)
 
 const PORT = process.env.PORT 
 app.listen(PORT,()=>{
