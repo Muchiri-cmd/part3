@@ -53,7 +53,7 @@ app.get('/api/persons/:id',(req,res,next)=>{
         .catch(err=>next(err))
 })
 
-app.post('/api/persons',(req,res)=>{
+app.post('/api/persons',(req,res,next)=>{
     const body = req.body
     if (!body.name){
         return res.status(400).json({error:'Name is missing'})
@@ -67,18 +67,18 @@ app.post('/api/persons',(req,res)=>{
             name:body.name,
             phoneNumber:body.phoneNumber
         }) 
-    person.save().then(savedPerson => {
-        console.log(`
-            added ${savedPerson.new_name} number ${savedPerson.phoneNumber} to phonebook\n`
-        )
-        res.json(savedPerson)
-    })
+    person.save()
+        .then(savedPerson => {
+            console.log(`added ${savedPerson.new_name} number ${savedPerson.phoneNumber} to phonebook\n`)
+            res.json(savedPerson)
+         })
+         .catch(error=> next(error))
 })
 
 app.put('/api/persons/:id', (req, res,next) => {
     const id  = req.params.id;
     const updatedPerson = req.body;
-    Person.findByIdAndUpdate(id, updatedPerson, { new: true })
+    Person.findByIdAndUpdate(id,updatedPerson,{ new: true,runValidators:true, context:'query' })
         .then(updatedPerson =>  res.json(updatedPerson))
         .catch(error => next(error))
 });
@@ -95,8 +95,10 @@ app.delete('/api/persons/:id', async (req, res,next) => {
 const errorHandler = (error,req,res,next) =>{
     console.log(error.message)
 
-    if (error.name = 'CastError'){
+    if (error.name == 'CastError'){
         return res.status(400).send({ error: 'invalid id' })
+    } else if (error.name == 'ValidationError'){
+        return res.status(400).json({error:error.message})
     }
     next(error)
 }

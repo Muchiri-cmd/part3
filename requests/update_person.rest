@@ -1,7 +1,6 @@
-POST http://localhost:3000/api/persons
+PUT http://localhost:3000/api/persons/6698e061ea5261e5ace4cd78
 Content-Type: application/json
 
 {
-    "name":"Take",
     "phoneNumber":"09-1234556"
 }
